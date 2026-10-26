@@ -6,3 +6,4 @@ Probar en local:
     docker build -t python-app . && docker run --rm -p 8000:8000 --env-file .env python-app
     curl -X POST localhost:8000/api/items -H 'Content-Type: application/json' -d '{"nombre":"a"}'
 # python-app
+# python-app
