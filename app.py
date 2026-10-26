@@ -1,12 +1,13 @@
 import html
 import logging
 import os
+import secrets
 import time
 from contextlib import contextmanager
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, session
 
 VERSION = "v1"
 DB_VARS = ["DB_HOST", "DB_PORT", "DB_NAME", "DB_USER", "DB_PASSWORD"]
@@ -14,6 +15,13 @@ DB_VARS = ["DB_HOST", "DB_PORT", "DB_NAME", "DB_USER", "DB_PASSWORD"]
 app = Flask(__name__)
 log = logging.getLogger("app")
 logging.basicConfig(level=logging.INFO)
+
+# Clave de la cookie de sesión: solo desde el entorno. Sin ella se genera una al arrancar
+# (las sesiones no sobreviven a reinicios ni se comparten entre réplicas).
+app.secret_key = os.environ.get("SECRET_KEY")
+if not app.secret_key:
+    app.secret_key = secrets.token_hex(32)
+    log.warning("SECRET_KEY no definida: se usa una clave aleatoria temporal")
 
 
 def faltantes():
@@ -155,7 +163,8 @@ PAGINA = """<!doctype html>
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="Flask">
-<title>Items Python</title>
+<link rel="icon" href="data:,">
+<title>Lisec PaaS - python</title>
 <style>
 body{font-family:sans-serif;max-width:720px;margin:2rem auto;padding:0 1rem}
 .aviso{background:#fee;border:1px solid #c00;padding:.6rem}
@@ -164,6 +173,7 @@ li{margin:.3rem 0}
 </style></head><body>
 <h1>Items <small>(__VERSION__)</small></h1>
 <p class="msg">Mensaje: __MENSAJE__</p>
+<p>Visitas en esta sesión: __VISITAS__</p>
 __AVISO__
 <form id="f">
 <input name="nombre" maxlength="100" required placeholder="Nombre">
@@ -200,12 +210,14 @@ cargar();
 
 @app.get("/")
 def index():
+    session["visitas"] = session.get("visitas", 0) + 1
     f = faltantes()
     aviso = f'<p class="aviso">Faltan variables de entorno: {html.escape(", ".join(f))}</p>' if f else ""
     return (
         PAGINA.replace("__VERSION__", html.escape(VERSION))
         .replace("__MENSAJE__", html.escape(os.environ.get("APP_MESSAGE", "(APP_MESSAGE no definido)")))
         .replace("__AVISO__", aviso)
+        .replace("__VISITAS__", str(session["visitas"]))
     )
 
 
