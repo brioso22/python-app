@@ -83,6 +83,12 @@ def comprobar_config():
         return jsonify(error="Faltan variables de entorno: " + ", ".join(faltantes())), 503
 
 
+@app.after_request
+def powered_by(resp):
+    resp.headers["X-Powered-By"] = "Flask"
+    return resp
+
+
 @app.get("/health")
 def health():
     if faltantes():
@@ -148,6 +154,7 @@ def eliminar(item_id):
 PAGINA = """<!doctype html>
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="Flask">
 <title>Items Python</title>
 <style>
 body{font-family:sans-serif;max-width:720px;margin:2rem auto;padding:0 1rem}
